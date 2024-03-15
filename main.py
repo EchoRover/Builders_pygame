@@ -20,17 +20,47 @@ class Gamedata:
         self.aspect_ratio = ratio
         self.tilesize = tilesize
         self.hotbarsize = Hsize
+        self.screen = None
+  
     
    
-    def setup_screen(self,screen_width,screen_height):
-        self.screen_height = screen_height
-        self.screen_width = screen_width
+    def setup_screen(self,canvas_width,canvas_height):
+        self.canvas_height = canvas_height
+        self.canvas_width = canvas_width
+        self.target_canvas_height = canvas_height
+        self.target_canvas_width = canvas_width
+     
+
+    def update_screensize(self):
+        newmainw = self.screen.get_width()
+        newmainh = self.screen.get_height()
+
+        new_canvas_width = newmainw
+        new_canvas_height = newmainw / self.aspect_ratio
+
+        if new_canvas_height > newmainh:
+            new_canvas_height = newmainh
+            new_canvas_width = newmainh * self.aspect_ratio
+
+        self.canvas_offsetx = (newmainw - new_canvas_width) / 2
+        self.canvas_offsety = (newmainh - new_canvas_height) / 2
+
+        self.canvas_width = new_canvas_width
+        self.canvas_height = new_canvas_height
+
+ 
+        self.mousemaxW = self.canvas_width + self.canvas_offsetx
+        self.mouseminH = self.canvas_height + self.canvas_offsety
+
+        self.mouse_x_multiplier = self.target_canvas_width / self.canvas_width 
+        self.mouse_y_multiplier = self.target_canvas_height / self.canvas_height
+        
 
     def setup_screen_tile_lengths(self):
         self.screen_tile_length = math.ceil(
-            self.screen_width/self.tilesize) + 1
+            self.canvas_width/self.tilesize) + 1
         self.screen_tile_breadth = math.ceil(
-            self.screen_height/self.tilesize) + 1
+            self.canvas_height/self.tilesize) + 1
     
     
     def setupworld(self,worldlength,worldbreadth):
@@ -143,7 +173,7 @@ class Camera:
         self.gamedata = gamedata
         self.direction = pygame.math.Vector2()
         self.resistance = 0.8
-        self.acceleration = 3
+        self.acceleration = 4
         self.velocity = pygame.math.Vector2()  
         self.position = pygame.math.Vector2()  
 
@@ -175,13 +205,13 @@ class minimap:
         self.tiles = tiles
         pass
     def drawmap(self,map,surf):
-        tilesize = max(self.gamedate.screen_height//self.gamedate.worldbreadth,self.gamedate.screen_width//self.gamedate.worldlength)
+        tilesize = max(self.gamedate.canvas_height//self.gamedate.worldbreadth,self.gamedate.canvas_width//self.gamedate.worldlength)
         tilesize = 1
-        print(self.gamedate.screen_height//self.gamedate.worldbreadth,self.gamedate.screen_width//self.gamedate.worldlength)
+        
        
-        offsetx = self.gamedate.screen_width - tilesize * self.gamedate.worldlength
+        offsetx = self.gamedate.canvas_width - tilesize * self.gamedate.worldlength
         offsetx /= 2
-        offsety = self.gamedate.screen_height - tilesize * self.gamedate.worldbreadth
+        offsety = self.gamedate.canvas_height - tilesize * self.gamedate.worldbreadth
         offsety /= 2
 
     
@@ -206,7 +236,7 @@ class Editor:
     def createmap(self, sizex=300, sizey=300):
         #random.choice(list(self.tiles.tile.keys()))
         self.gameworld = [
-            [ random.choice(list(self.tiles.tile.keys())) for _ in range(sizex)] for __ in range(sizey)]
+            [ "dirt" for _ in range(sizex)] for __ in range(sizey)]
         self.gamedata.setupworld(sizex,sizey)
         self.gamedata.setup_max_borders()
         
@@ -221,12 +251,16 @@ class Editor:
                 self.gameworld[y][x] = "stone"
 
 
-    def get_tile(self):
+    def get_tile(self,x,y):
         #if self.tile_x >= 0 and self.tile_y >= 0 and self.tile_x < self.gamedata.worldlength and self.tile_y < self.gamedata.worldbreadth:
-        mx, my = pygame.mouse.get_pos()
+        mx, my = x,y
         self.tile_x = int((mx + self.gamedata.camx) / self.gamedata.tilesize)
         self.tile_y = int((my + self.gamedata.camy) / self.gamedata.tilesize)
-        self.tile = self.gameworld[self.tile_y][self.tile_x]
+        try:
+            self.tile = self.gameworld[self.tile_y][self.tile_x]
+        except:
+            print(f" tile x and y {self.tile_x,self.tile_y}")
+            self.tile = None
       
        
 
@@ -243,16 +277,18 @@ class Editor:
     def saveworld(self):
         ...
     
-    def mousepress(self):
-        self.get_tile()
+    def mousepress(self,x,y):
+        self.get_tile(x,y)
      
         if pygame.key.get_pressed()[pygame.K_e]:
             newtile = None
         else:
             newtile = self.hotbar.selected_tile
-            
-        self.gameworld[self.tile_y][self.tile_x] = newtile
-        
+        try:
+
+            self.gameworld[self.tile_y][self.tile_x] = newtile
+        except:
+            print("error")
             
 
     def update(self):
@@ -271,15 +307,14 @@ class HotBar:
         self.contain = ["dirt_grass","dirt","stone","sand","water","wood","glass",None,None,None]
         self.bar_width = self.num_tiles * (self.tile_size + self.spacing) + self.spacing
         self.bar_height = self.tile_size + 2 * self.spacing
-        self.bar_x = (self.gamedata.screen_width - self.bar_width) // 2
-        self.bar_y = self.gamedata.screen_height - self.bar_height - 10
+        self.bar_x = (self.gamedata.canvas_width - self.bar_width) // 2
+        self.bar_y = self.gamedata.canvas_height - self.bar_height - 10
 
         self.tilespacing = (self.tile_size - 48 )//2
         self.selected_tile_index = 0
         self.selected_tile = self.contain[self.selected_tile_index]
 
     def draw(self, surface):
-        # (105,105,105)
         pygame.draw.rect(surface, (192,192,192), (self.bar_x , self.bar_y, self.bar_width , self.bar_height))
     
         for i, tile in enumerate(self.contain):
@@ -296,14 +331,14 @@ class HotBar:
             surface.blit(self.tiles.Htile[tile], (x + self.tilespacing , y + self.tilespacing ))
             
 
-    def ifmouseclick(self):
+    def ifmouseclick(self,mx,my):
 
       
-        mouse_x, mouse_y = pygame.mouse.get_pos()
+ 
         for i in range(self.num_tiles):
             x = self.bar_x + i * (self.tile_size + self.spacing) + self.spacing
             y = self.bar_y + self.spacing
-            if x <= mouse_x <= x + self.tile_size and y <= mouse_y <= y + self.tile_size:
+            if x <= mx <= x + self.tile_size and y <= my <= y + self.tile_size:
                 self.selected_tile_index = i
                 self.selected_tile = self.contain[i]
 
@@ -323,9 +358,11 @@ class Game:
 
 
         self.clock = pygame.time.Clock()
-        self.screen = pygame.Surface((self.gamedata.screen_width, self.gamedata.screen_height))
-        self.display = pygame.display.set_mode(
-            (self.gamedata.screen_width, self.gamedata.screen_height), pygame.RESIZABLE + pygame.SCALED )
+        self.canvas = pygame.Surface((self.gamedata.canvas_width, self.gamedata.canvas_height))
+        self.screen = pygame.display.set_mode(
+            (self.gamedata.canvas_width, self.gamedata.canvas_height), pygame.RESIZABLE)
+        self.gamedata.screen = self.screen
+        self.gamedata.update_screensize()
 
         self.editor = 1
 
@@ -338,6 +375,9 @@ class Game:
             self.minemap = minimap(self.gamedata,self.editor.tiles)
     
 
+
+
+
  
 
 
@@ -345,46 +385,43 @@ class Game:
 
 
     def run_editor(self):
-        i = 1
+ 
+      
         while True:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                elif event.type == pygame.VIDEORESIZE:
-                    pass
-                    # self.gamedata.screen_width = event.w
-                    # self.gamedata.screen_height = event.h
-                    # self.gamedata.setup_screen_tile_lengths()
-                    # self.gamedata.setup_max_borders()
+                elif event.type == pygame.WINDOWRESIZED:
+            
+                 
+                    self.gamedata.update_screensize()
                 
-                    # screen = pygame.display.set_mode(
-                    #     (self.gamedata.screen_width, self.gamedata.screen_height), pygame.RESIZABLE)
+
                 elif pygame.mouse.get_pressed()[0]:
-                    if not self.hotbar.ifmouseclick():
-                        self.editor.mousepress()
+                    x,y = pygame.mouse.get_pos()
+                    if (self.gamedata.canvas_offsetx <=  x <= self.gamedata.mousemaxW and  self.gamedata.canvas_offsety <= y <= self.gamedata.mouseminH):
+                        mx = (x - self.gamedata.canvas_offsetx) * self.gamedata.mouse_x_multiplier
+                        my = (y - self.gamedata.canvas_offsety) * self.gamedata.mouse_y_multiplier
+         
+                        if not  self.hotbar.ifmouseclick(mx,my):
+                            self.editor.mousepress(mx,my)
                  
             self.cam.update()
+            
        
         
-            self.display.fill((255, 255, 255))
+            self.canvas.fill((255, 255, 255))
             self.screen.fill((0,0,0))
 
-            self.screengrid.draw(self.display, self.editor.gameworld)
-            self.hotbar.draw(self.display)
-            # self.minemap.drawmap(self.editor.gameworld,self.display)
+            self.screengrid.draw(self.canvas, self.editor.gameworld)
+            self.hotbar.draw(self.canvas)
+            # self.minemap.drawmap(self.editor.gameworld,self.canvas)
+         
 
-            # print((int(self.screen.get_height() * self.gamedata.aspect_ratio), self.screen.get_height()))
-            # self.screen.blit(self.display,(0,0))
-
-            # if self.screen.get_height() > self.screen.get_width() / self.gamedata.aspect_ratio:
-            #     self.screen.blit(pygame.transform.scale(self.display, (self.screen.get_width(), int(self.screen.get_width() / self.gamedata.aspect_ratio))), (0, 0))
-            #     print("hi")
-            # else:
               
-            #     self.screen.blit(pygame.transform.scale(self.display, (int(self.screen.get_height() * self.gamedata.aspect_ratio), self.screen.get_height())), (0, 0))
-            # self.resize_display()
-
+            self.screen.blit(pygame.transform.scale(self.canvas, (self.gamedata.canvas_width,self.gamedata.canvas_height)),(self.gamedata.canvas_offsetx,self.gamedata.canvas_offsety))
+        
         
 
             pygame.display.flip()
