@@ -8,6 +8,7 @@ pygame.init()
 
 class Gamedata:
     def __init__(self):
+        self.gamestate = None
         
 
         ...
@@ -15,9 +16,10 @@ class Gamedata:
         self.camx = camx
         self.camy = camy
    
-    def setup_main(self,tilesize,ratio):
+    def setup_main(self,tilesize,ratio,Hsize):
         self.aspect_ratio = ratio
         self.tilesize = tilesize
+        self.hotbarsize = Hsize
     
    
     def setup_screen(self,screen_width,screen_height):
@@ -61,6 +63,8 @@ class ScreenGrid():
                 tile = world[tiley + y][tilex + x]
                 if tile:
                     surface.blit(self.tiles.tile[tile], (x * self.gamedata.tilesize + offsetX, y * self.gamedata.tilesize + offsetY))
+        
+
 
   
 
@@ -70,9 +74,9 @@ class ScreenGrid():
 
 
 class Tiles:
-    def __init__(self, t):
+    def __init__(self, t,hotbarsize):
         self.TILESIZE = t
-        self.Hotbar_scale = 48
+        self.Hotbar_scale = hotbarsize
    
 
         self.tile = dict()
@@ -165,6 +169,25 @@ class Camera:
         self.gamedata.camy = self.position.y
    
 
+class minimap:
+    def __init__(self,gamedata,tiles):
+        self.gamedate = gamedata
+        self.tiles = tiles
+        pass
+    def drawmap(self,map,surf):
+        tilesize = max(self.gamedate.screen_height//self.gamedate.worldbreadth,self.gamedate.screen_width//self.gamedate.worldlength)
+        tilesize = 1
+        print(self.gamedate.screen_height//self.gamedate.worldbreadth,self.gamedate.screen_width//self.gamedate.worldlength)
+       
+        offsetx = self.gamedate.screen_width - tilesize * self.gamedate.worldlength
+        offsetx /= 2
+        offsety = self.gamedate.screen_height - tilesize * self.gamedate.worldbreadth
+        offsety /= 2
+
+    
+        for y in range(self.gamedate.worldbreadth):
+            for x in range(self.gamedate.worldlength):
+                surf.blit(pygame.transform.scale(self.tiles.tile[map[y][x]],(tilesize,tilesize)),(tilesize * x + offsetx,tilesize * y + offsety))
 
 class Editor:
     def __init__(self, gamedata):
@@ -172,17 +195,18 @@ class Editor:
         self.gamedata = gamedata
     
 
-        self.tiles = Tiles(self.gamedata.tilesize)
+        self.tiles = Tiles(self.gamedata.tilesize,self.gamedata.hotbarsize)
 
         self.createmap()
+        self.generate()
     
     def addhotbar(self,hotbar):
         self.hotbar = hotbar
 
-    def createmap(self, sizex=100, sizey=100):
+    def createmap(self, sizex=300, sizey=300):
         #random.choice(list(self.tiles.tile.keys()))
         self.gameworld = [
-            [ "dirt" for _ in range(sizex)] for __ in range(sizey)]
+            [ random.choice(list(self.tiles.tile.keys())) for _ in range(sizex)] for __ in range(sizey)]
         self.gamedata.setupworld(sizex,sizey)
         self.gamedata.setup_max_borders()
         
@@ -190,6 +214,12 @@ class Editor:
 
     def copymap(self):
         return [row.copy() for row in self.gameworld]
+    
+    def generate(self):
+        for y in range(self.gamedata.worldbreadth//3,self.gamedata.worldbreadth):
+            for x in range(self.gamedata.worldlength):
+                self.gameworld[y][x] = "stone"
+
 
     def get_tile(self):
         #if self.tile_x >= 0 and self.tile_y >= 0 and self.tile_x < self.gamedata.worldlength and self.tile_y < self.gamedata.worldbreadth:
@@ -197,6 +227,7 @@ class Editor:
         self.tile_x = int((mx + self.gamedata.camx) / self.gamedata.tilesize)
         self.tile_y = int((my + self.gamedata.camy) / self.gamedata.tilesize)
         self.tile = self.gameworld[self.tile_y][self.tile_x]
+      
        
 
     def handlemouse(self):
@@ -232,7 +263,7 @@ class HotBar:
     def __init__(self, gamedata, tiles):
         self.gamedata = gamedata
         self.tiles = tiles
-        self.tile_size = 64  
+        self.tile_size = 48
         self.spacing = 5  
         self.num_tiles = 10
       
@@ -286,15 +317,15 @@ class Game:
  
         self.gamedata = Gamedata()
 
-        self.gamedata.setup_main(32,(16,9))
+        self.gamedata.setup_main(64,16/9,48)
         self.gamedata.setup_screen(1280,720)
         self.gamedata.setup_screen_tile_lengths()
 
 
         self.clock = pygame.time.Clock()
         self.screen = pygame.Surface((self.gamedata.screen_width, self.gamedata.screen_height))
-        self.main_screen = pygame.display.set_mode(
-            (self.gamedata.screen_width, self.gamedata.screen_height), pygame.RESIZABLE)
+        self.display = pygame.display.set_mode(
+            (self.gamedata.screen_width, self.gamedata.screen_height), pygame.RESIZABLE + pygame.SCALED )
 
         self.editor = 1
 
@@ -304,23 +335,31 @@ class Game:
             self.screengrid = ScreenGrid(self.gamedata,self.editor.tiles)
             self.hotbar = HotBar(self.gamedata, self.editor.tiles)
             self.editor.addhotbar(self.hotbar)
+            self.minemap = minimap(self.gamedata,self.editor.tiles)
+    
+
+ 
+
+
 
 
 
     def run_editor(self):
+        i = 1
         while True:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                 elif event.type == pygame.VIDEORESIZE:
-                    self.gamedata.screen_width = event.w
-                    self.gamedata.screen_height = event.h
-                    self.gamedata.setup_screen_tile_lengths()
-                    self.gamedata.setup_max_borders()
+                    pass
+                    # self.gamedata.screen_width = event.w
+                    # self.gamedata.screen_height = event.h
+                    # self.gamedata.setup_screen_tile_lengths()
+                    # self.gamedata.setup_max_borders()
                 
-                    screen = pygame.display.set_mode(
-                        (self.gamedata.screen_width, self.gamedata.screen_height), pygame.RESIZABLE,pygame.SCALED)
+                    # screen = pygame.display.set_mode(
+                    #     (self.gamedata.screen_width, self.gamedata.screen_height), pygame.RESIZABLE)
                 elif pygame.mouse.get_pressed()[0]:
                     if not self.hotbar.ifmouseclick():
                         self.editor.mousepress()
@@ -328,14 +367,25 @@ class Game:
             self.cam.update()
        
         
+            self.display.fill((255, 255, 255))
+            self.screen.fill((0,0,0))
 
+            self.screengrid.draw(self.display, self.editor.gameworld)
+            self.hotbar.draw(self.display)
+            # self.minemap.drawmap(self.editor.gameworld,self.display)
 
-            self.screen.fill((255, 255, 255))
+            # print((int(self.screen.get_height() * self.gamedata.aspect_ratio), self.screen.get_height()))
+            # self.screen.blit(self.display,(0,0))
 
-            self.screengrid.draw(self.screen, self.editor.gameworld)
-            self.hotbar.draw(self.screen)
+            # if self.screen.get_height() > self.screen.get_width() / self.gamedata.aspect_ratio:
+            #     self.screen.blit(pygame.transform.scale(self.display, (self.screen.get_width(), int(self.screen.get_width() / self.gamedata.aspect_ratio))), (0, 0))
+            #     print("hi")
+            # else:
+              
+            #     self.screen.blit(pygame.transform.scale(self.display, (int(self.screen.get_height() * self.gamedata.aspect_ratio), self.screen.get_height())), (0, 0))
+            # self.resize_display()
 
-            self.main_screen.blit(self.screen,(0,0))
+        
 
             pygame.display.flip()
             self.clock.tick(30)
