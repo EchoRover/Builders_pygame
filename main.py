@@ -70,17 +70,12 @@ class Gamedata:
     def setup_max_borders(self):
         self.max_length_border = self.tilesize * (self.worldlength - self.screen_tile_length)
         self.max_breadth_border = self.tilesize * (self.worldbreadth - self.screen_tile_breadth)
-
     
-    
-
-
 class ScreenGrid():
     def __init__(self,gamedata,tiles):
         
         self.gamedata = gamedata
         self.tiles = tiles
-    
     
     def draw(self, surface, world):
         tilex = int(self.gamedata.camx // self.gamedata.tilesize)
@@ -93,16 +88,7 @@ class ScreenGrid():
                 tile = world[tiley + y][tilex + x]
                 if tile:
                     surface.blit(self.tiles.tile[tile], (x * self.gamedata.tilesize + offsetX, y * self.gamedata.tilesize + offsetY))
-        
-
-
-  
-
-
     
-
-
-
 class Tiles:
     def __init__(self, t,hotbarsize):
         self.TILESIZE = t
@@ -127,7 +113,6 @@ class Tiles:
 
                 self.tile[filename.rstrip('.png')] = scaled_image
                 self.Htile[filename.rstrip('.png')] = pygame.transform.scale(image, (self.Hotbar_scale, self.Hotbar_scale))
-        
         
 
 class Cameraold:
@@ -296,8 +281,9 @@ class Editor:
         self.handlemouse()
 
 class HotBar:
-    def __init__(self, gamedata, tiles):
+    def __init__(self, gamedata, tiles,mouse):
         self.gamedata = gamedata
+        self.mouse = mouse
         self.tiles = tiles
         self.tile_size = 48
         self.spacing = 5  
@@ -332,21 +318,59 @@ class HotBar:
             
 
     def ifmouseclick(self,mx,my):
-
-      
- 
         for i in range(self.num_tiles):
             x = self.bar_x + i * (self.tile_size + self.spacing) + self.spacing
             y = self.bar_y + self.spacing
             if x <= mx <= x + self.tile_size and y <= my <= y + self.tile_size:
                 self.selected_tile_index = i
                 self.selected_tile = self.contain[i]
+                if self.mouse.state == "leave":
+                    if self.selected_tile == None:
+                        self.contain[i] = self.mouse.tile
+                        self.contain[self.mouse.index] = None
+                        self.selected_tile_index = self.mouse.index
+                        self.selected_tile = self.mouse.tile
+                        self.mouse.state = None
+                        self.mouse.index = None
+                        self.mouse.tile = None
+                    else:
+                        break
+
+
+                else:
+                    self.mouse.drag(self.selected_tile,self.selected_tile_index)
+            
 
                 return True
+        if self.mouse.state == "leave":
+            self.mouse.state = None
+            self.mouse.index = None
+            self.mouse.tile = None
         return False
-                
+    
+    def drawdrag(self,surf):
+     
+        if self.mouse.state == "drag" and self.mouse.tile:
+            print(self.mouse.state)
+            surf.blit(self.tiles.Htile[self.mouse.tile],(self.mouse.x - self.tile_size//2,self.mouse.y - self.tile_size//2))
 
 
+
+class Mouse:
+    def __init__(self):
+        self.state = None
+        self.x,self.y = None,None
+        self.tile = None
+        self.index = None
+
+    def setpos(self,x,y):
+        self.x = x
+        self.y = y
+    
+    def drag(self,tile,idx):
+        self.state = "drag"
+        self.tile = tile
+        self.index = idx
 class Game:
     def __init__(self):
  
@@ -369,10 +393,30 @@ class Game:
         if self.editor == 1:
             self.editor = Editor(self.gamedata)
             self.cam = Camera(self.gamedata)
+            self.mouse = Mouse()
             self.screengrid = ScreenGrid(self.gamedata,self.editor.tiles)
-            self.hotbar = HotBar(self.gamedata, self.editor.tiles)
+            self.hotbar = HotBar(self.gamedata, self.editor.tiles,self.mouse)
             self.editor.addhotbar(self.hotbar)
             self.minemap = minimap(self.gamedata,self.editor.tiles)
+        
+
+    
+    def handlemouse(self,mx = None,my = None):
+        self.mouse.setpos(mx,my)
+        if self.mouse.state == "leave":
+            self.hotbar.ifmouseclick(mx,my)
+
+        if self.mouse.state == "drag":
+            return
+
+
+        
+
+        if not self.hotbar.ifmouseclick(mx,my):
+            self.editor.mousepress(mx,my)
+       
+
+
     
 
 
@@ -385,9 +429,14 @@ class Game:
 
 
     def run_editor(self):
+        bef = None
  
       
         while True:
+            if bef != self.mouse.state:
+
+                print(self.mouse.state)
+                bef = self.mouse.state
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -397,15 +446,29 @@ class Game:
                  
                     self.gamedata.update_screensize()
                 
-
                 elif pygame.mouse.get_pressed()[0]:
                     x,y = pygame.mouse.get_pos()
                     if (self.gamedata.canvas_offsetx <=  x <= self.gamedata.mousemaxW and  self.gamedata.canvas_offsety <= y <= self.gamedata.mouseminH):
                         mx = (x - self.gamedata.canvas_offsetx) * self.gamedata.mouse_x_multiplier
                         my = (y - self.gamedata.canvas_offsety) * self.gamedata.mouse_y_multiplier
+                        self.handlemouse(mx,my)
+                    
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    x,y = pygame.mouse.get_pos()
+                    if (self.gamedata.canvas_offsetx <=  x <= self.gamedata.mousemaxW and  self.gamedata.canvas_offsety <= y <= self.gamedata.mouseminH):
+                        mx = (x - self.gamedata.canvas_offsetx) * self.gamedata.mouse_x_multiplier
+                        my = (y - self.gamedata.canvas_offsety) * self.gamedata.mouse_y_multiplier
+                        self.mouse.state = "leave"
+                        self.handlemouse(mx,my)
+                    else:
+                        self.mouse.state = None
+                    
+
+
+            
+                     
          
-                        if not  self.hotbar.ifmouseclick(mx,my):
-                            self.editor.mousepress(mx,my)
+                      
                  
             self.cam.update()
             
@@ -416,6 +479,7 @@ class Game:
 
             self.screengrid.draw(self.canvas, self.editor.gameworld)
             self.hotbar.draw(self.canvas)
+            self.hotbar.drawdrag(self.canvas)
             # self.minemap.drawmap(self.editor.gameworld,self.canvas)
          
 
@@ -429,5 +493,10 @@ class Game:
 
 
 
+
+    
+
 game = Game()
 game.run_editor()
+
+
