@@ -1,5 +1,6 @@
 import pygame
 import random
+import sys
 
 
 from inventory import Item, HotBar
@@ -170,6 +171,7 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
                 elif event.type == pygame.WINDOWRESIZED:
 
                     self.gamedata.update_screensize()
