@@ -1,91 +1,6 @@
 import random
 import pygame
 import sys
-import multiprocessing
-import numpy as np
-SIZE = 255
-
-
-def permutation_table(num):
-    a = list(range(num))
-    random.shuffle(a)
-    return a * 2
-
-
-class vector2:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    def dot(self, other):
-        return self.x * other.x + self.y * other.y
-
-
-def constraint(v):
-    a = v & 3
-    if a == 0:
-        return vector2(1, 1)
-    elif a == 1:
-        return vector2(-1, 1)
-    elif a == 2:
-        return vector2(-1, -1)
-    else:
-        return vector2(1, -1)
-
-
-def lerp(t, a1, a2):
-    return (a2 - a1) * t + a1
-
-
-# 6t5-15t4+10t3
-def fade(t):
-    return ((6 * t - 15) * t + 10) * t ** 3
-
-
-def Noise2d(x, y):
-
-    X = int(x) % (256)
-    Y = int(y) % (256)
-    xf = x - int(x)
-    yf = y - int(y)
-
-    topright = vector2(xf - 1, yf - 1)
-    topleft = vector2(xf, yf - 1)
-    bottomright = vector2(xf - 1, yf)
-    bottomleft = vector2(xf, yf)
-
-    valtopright = P[P[X + 1] + Y + 1]
-    valtopleft = P[P[X] + Y + 1]
-    valbottomright = P[P[X + 1] + Y]
-    valbottomleft = P[P[X] + Y]
-
-    dottopright = topright.dot(constraint(valtopright))
-    dottopleft = topleft.dot(constraint(valtopleft))
-    dotbottomright = bottomright.dot(constraint(valbottomright))
-    dotbottomleft = bottomleft.dot(constraint(valbottomleft))
-
-    u = fade(xf)
-    v = fade(yf)
-
-    result = lerp(u, lerp(v, dotbottomleft, dottopleft),
-                  lerp(v, dotbottomright, dottopright))
-
-    return result
-
-
-def FractalBrownianMotion(x, y, octave):
-    result = 0
-    amplitude = 1
-    frequency = 0.005
-    for o in range(octave):
-        result += amplitude * Noise2d(x * frequency, y * frequency)
-        amplitude *= 0.5
-        frequency *= 2
-    return result
-
-
-P = permutation_table(256)
-
 
 class Noise3D:
     def __init__(self):
@@ -150,15 +65,76 @@ class Noise3D:
         result = 0
         amplitude = 1
         frequency = 0.005
-        test = []
+
         for o in range(octave):
             result += amplitude * \
                 self.noise(x * frequency, y * frequency, z * frequency)
-            test.append(x, y, z)
+   
 
             amplitude *= 0.5
             frequency *= 2
         return result
+
+
+
+print(Noise3D().FractalBrownianMotion(1,2,3,3))
+
+import ctypes
+import ctypes
+
+# Load the shared library
+lib = ctypes.CDLL('noise.so')  # Update the path if necessary
+
+# Define the Noise3D struct
+class Noise3D(ctypes.Structure):
+    _fields_ = [("P", ctypes.c_int * 1024)]  # SIZE * 2 = 512 * 2 = 1024
+
+# Define the argument and return types for the functions
+lib.init.argtypes = [ctypes.POINTER(Noise3D)]
+lib.init.restype = None
+
+lib.fractalBrownianMotion.argtypes = [ctypes.CFUNCTYPE(ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float), ctypes.POINTER(Noise3D), ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_int]
+lib.fractalBrownianMotion.restype = ctypes.c_float
+
+# Create a Noise3D instance
+noise = Noise3D()
+
+# Initialize the permutation table
+lib.init(ctypes.byref(noise))
+
+# Define the callback function for the noise function
+def noiseFunction(x, y, z):
+    return lib.noiseFunction(ctypes.byref(noise), ctypes.c_float(x), ctypes.c_float(y), ctypes.c_float(z))
+
+# Convert the noiseFunction to the correct function type
+noise_function_type = ctypes.CFUNCTYPE(ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float)
+c_noise_function = noise_function_type(noiseFunction)
+
+# Call the fractalBrownianMotion function
+result = lib.fractalBrownianMotion(c_noise_function, ctypes.byref(noise), ctypes.c_float(1.23), ctypes.c_float(2.30), ctypes.c_float(3.20), ctypes.c_int(3))
+
+print("Result:", result)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class NoiseSee:
@@ -212,6 +188,6 @@ class NoiseSee:
             self.draw()
 
 
-a = NoiseSee().run()
+# a = NoiseSee().run()
 # a = Noise3D()
 # print(a.noise(0.1,0.2,1))
