@@ -79,41 +79,7 @@ class Noise3D:
 
 print(Noise3D().FractalBrownianMotion(1,2,3,3))
 
-import ctypes
-import ctypes
 
-# Load the shared library
-lib = ctypes.CDLL('noise.so')  # Update the path if necessary
-
-# Define the Noise3D struct
-class Noise3D(ctypes.Structure):
-    _fields_ = [("P", ctypes.c_int * 1024)]  # SIZE * 2 = 512 * 2 = 1024
-
-# Define the argument and return types for the functions
-lib.init.argtypes = [ctypes.POINTER(Noise3D)]
-lib.init.restype = None
-
-lib.fractalBrownianMotion.argtypes = [ctypes.CFUNCTYPE(ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float), ctypes.POINTER(Noise3D), ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_int]
-lib.fractalBrownianMotion.restype = ctypes.c_float
-
-# Create a Noise3D instance
-noise = Noise3D()
-
-# Initialize the permutation table
-lib.init(ctypes.byref(noise))
-
-# Define the callback function for the noise function
-def noiseFunction(x, y, z):
-    return lib.noiseFunction(ctypes.byref(noise), ctypes.c_float(x), ctypes.c_float(y), ctypes.c_float(z))
-
-# Convert the noiseFunction to the correct function type
-noise_function_type = ctypes.CFUNCTYPE(ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float)
-c_noise_function = noise_function_type(noiseFunction)
-
-# Call the fractalBrownianMotion function
-result = lib.fractalBrownianMotion(c_noise_function, ctypes.byref(noise), ctypes.c_float(1.23), ctypes.c_float(2.30), ctypes.c_float(3.20), ctypes.c_int(3))
-
-print("Result:", result)
 
 
 
