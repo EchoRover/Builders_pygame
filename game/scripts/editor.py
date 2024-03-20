@@ -1,11 +1,15 @@
 import random
-from levelgenerate import LevelGen
+
+
+
+    
 
 class Editor:
-    def __init__(self, gamedata, tiles):
+    def __init__(self, gamedata, tiles,levelgen):
 
         self.gamedata = gamedata
         self.tiles = tiles
+        self.LevelGen = levelgen
         self.createmap()
         self.generate()
 
@@ -27,7 +31,7 @@ class Editor:
         return [row.copy() for row in self.gameworld]
 
     def generate(self):
-        self.gameworld = LevelGen(self.gameworld,self.gamedata).gen()
+        self.gameworld = self.LevelGen(self.gameworld,self.gamedata).gen()
        
 
     def get_tile(self, x, y):

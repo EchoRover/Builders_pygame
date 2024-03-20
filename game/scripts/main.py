@@ -2,11 +2,25 @@ import pygame
 import random
 import sys
 
+if __name__ == '__main__':
 
-from inventory import Item, HotBar
-from editor import Editor
-from screen_map import ScreenGrid, MiniMap
-from camera import Camera
+    from inventory import Item, HotBar
+    from editor import Editor
+    from screen_map import ScreenGrid, MiniMap
+    from camera import Camera
+    from levelgenerate import LevelGen
+
+else:
+    
+    from .inventory import Item, HotBar
+    from .editor import Editor
+    from .screen_map import ScreenGrid, MiniMap
+    from .camera import Camera
+    from .levelgenerate import LevelGen
+
+
+
+
 from math import ceil
 import os
 
@@ -87,7 +101,9 @@ class Tiles:
         self.load_tiles()
 
     def load_tiles(self):
-        tiles_folder = "tiles"
+        tiles_folder = __file__[:-len("/scripts/main.py")] + "/tiles"
+        print(__file__)
+        print(tiles_folder)
         for filename in os.listdir(tiles_folder):
             if filename.endswith(".png"):
 
@@ -126,7 +142,7 @@ class Game:
 
         if self.editor == 1:
             self.editor = Editor(self.gamedata, Tiles(
-                self.gamedata.tilesize, self.gamedata.HotBar_tile_size))
+                self.gamedata.tilesize, self.gamedata.HotBar_tile_size),LevelGen)
             self.cam = Camera(self.gamedata)
             self.screengrid = ScreenGrid(self.gamedata, self.editor.tiles)
             self.hotbar = HotBar(self.gamedata, self.editor.tiles)

@@ -1,5 +1,11 @@
 import random
 
+# if __name__ == "__main__":
+#     import noise
+# else:
+#     from . import noise
+import noise
+
 
 class LevelGen:
     def __init__(self,world = None,gamedata = None):
