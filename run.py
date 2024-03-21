@@ -1,3 +1,4 @@
+
 from game.scripts import main
 
 mygame = main.Game()

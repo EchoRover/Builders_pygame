@@ -48,7 +48,7 @@ class NoiseSee:
 
         pygame.init()
 
-        self.SW, self.SH = 400, 400
+        self.SW, self.SH = 300, 200
 
         self.screen = pygame.display.set_mode(
             (self.SW, self.SH), pygame.RESIZABLE + pygame.SCALED)
